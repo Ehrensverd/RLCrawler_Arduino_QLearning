@@ -15,7 +15,6 @@
 #endif
 
 
-
 //#define ENCODER_USE_INTERRUPTS
 #include <Encoder.h>
 #include <Servo.h>
@@ -130,138 +129,69 @@ void setup() {
 
 
 void loop() {
-  //delay(20);
-  Serial1.println("****************");
-  Serial1.print("OLD STATE: ");Serial1.println(gw2state[gwS1][gwS2]);
-  //Serial1.print("g1: ");Serial1.print(gwS1);
-  //Serial1.print("g2: ");Serial1.print(gwS2);
-    //Pick an action by e-greedy policy
+  
+  DEBUG_PRINTLN("****************");
+  DEBUG_PRINT("OLD STATE: "); DEBUG_PRINTLN(gw2state[gwS1][gwS2]);
+  
+//Pick an action by e-greedy policy
   for(i=0;i<4;i++){Q_currentState[i] = Q[gw2state[gwS1][gwS2]][i];}
   action = e_greedy(e_greed, e_greed_final, e_greed_step, Q_currentState);
-  //DEBUG_PRINT("STATE: ");
- // DEBUG_PRINT(gwS1); DEBUG_PRINT(" "); DEBUG_PRINTLN(gwS2);
+ 
+//compute the new state reached by the picked action  
+   action2state(gwS1, gwS2, newgwS1, newgwS2, n_states, action); 
+      DEBUG_PRINT("NEW STATE: ");DEBUG_PRINTLN(gw2state[newgwS1][newgwS2]);
+    //DEBUG_PRINT("ng1: ");DEBUG_PRINTLN(newgwS1);
+    //DEBUG_PRINT("ng2: ");DEBUG_PRINTLN(newgwS2);    
   
-  //compute the new state reached by the picked action     
-  if (action == 0)
-    {
-      //Serial1.print("A0 ");
-    if ((gwS1 <= 0) && (action == 0))
-      {
-      newgwS1 = gwS1;
-      newgwS2 = gwS2;
-      }
-    else 
-      {
-      newgwS1 = gwS1 - 1;
-      newgwS2 = gwS2;
-      }
-    }
-    
-   if (action == 1)
-    { //Serial1.print("A1 ");
-    if ((gwS1 >= n_states[0]-1) && (action == 1))
-      {
-      newgwS1 = gwS1;
-      newgwS2 = gwS2;
-      }
-    else 
-      {
-      newgwS1 = gwS1 + 1;
-      newgwS2 = gwS2;
-      }
-    }
-
-   if (action == 2)
-    { //Serial1.print("A2 ");
-    if ((gwS2 <= 0) && (action == 2))
-      {
-      newgwS1 = gwS1;
-      newgwS2 = gwS2;
-      }
-    else 
-      {
-      newgwS1 = gwS1;
-      newgwS2 = gwS2 - 1;
-      }
-    }
-
-   if (action == 3)
-    {// Serial1.print("A3 ");
-    if ((gwS2 >= n_states[1]-1)) //&& (action == 3))
-      {
-      newgwS1 = gwS1;
-      newgwS2 = gwS2;
-      }
-    else
-      { 
-      newgwS1 = gwS1;  
-      newgwS2 = gwS2 + 1;
-      }
-    }
-    Serial1.print("ng1: ");Serial1.println(newgwS1);
-    Serial1.print("ng2: ");Serial1.println(newgwS2);
-    Serial1.print("NEW STATE: ");Serial1.println(gw2state[newgwS1][newgwS2]);
-  
-//  DEBUG_PRINT("NEWSTATE: ");
-//  DEBUG_PRINT(newgwS1); DEBUG_PRINT(" "); DEBUG_PRINTLN(newgwS2);
-//  DEBUG_PRINTLN(servopos[newgwS1][0]);
-//  DEBUG_PRINTLN(servopos[newgwS2][1]);
-  //update the real world system to the new state -> moving the servos
+//update the real world system to the new state -> moving the servos
   S1.write(servopos[newgwS1][0]);
   S2.write(servopos[newgwS2][1]);
   delay(waitforservos);
 
-  k=0;
-  //long newPosition;
-  ms_hold = millis();//-600;
-while(true)//(abs(newPosition - newPosition_hold) > 10) //Verdacht: reward assignment klappt nicht: für gleiche gute aktion einmal hohen und einmal niedrigen reward -> langere pause?
-{
-  ms = millis();
-  //Serial1.println(ms);
-  //Serial1.println(ms_hold);
-    if(ms >= ms_hold + vel_dt) //130
-    {
-     ms_hold = ms;
-     newPosition = rot_encoder.read(); 
-     vel = ((newPosition - newPosition_hold) * 1000) / vel_dt;
-     //Serial1.print("Velocity: ");Serial1.println(vel);
-     //Serial1.println(newPosition);
-     
-        if(abs(vel) < 300) 
-        {
-         newPosition_hold = newPosition;
-         Serial1.println("BREAK");
-         break;
-        }
-        
-        newPosition_hold = newPosition;
-     }
-    k++;
-    //Serial1.println(k);  
-}
+//Measure change in Position with the rotary encoder
+   k=0;
+   ms_hold = millis();
+  while(true) // wait and measure as long as the velocity is above "vel"
+  {
+    ms = millis();
+      if(ms >= ms_hold + vel_dt) 
+      {
+       ms_hold = ms;
+       newPosition = rot_encoder.read(); 
+       vel = ((newPosition - newPosition_hold) * 1000) / vel_dt;
+        //DEBUG_PRINT("Velocity: ");Serial1.println(vel);
+        //DEBUG_PRINTLN(newPosition);
+       
+          if(abs(vel) < 300) 
+          {
+           newPosition_hold = newPosition;
+           Serial1.println("BREAK");
+           break;
+          }
+          
+          newPosition_hold = newPosition;
+       }
+      k++;
+  }
 
+//Observe Reward
+  reward = newPosition - oldPosition;
+  reward = reward * movedir; // Negate reward when moving backwards is selected
 
-reward = newPosition - oldPosition;
-
-
-reward = reward * movedir;
-//Serial1.print("NEWPOS: ");  Serial1.println(newPosition);  
-//Serial1.print("OLDPOS:   "); Serial1.println(oldPosition);
-//Serial1.print("reward:   "); Serial1.println(reward);
   DEBUG_PRINT("OLD POS: "); DEBUG_PRINTLN(oldPosition);
   DEBUG_PRINT("NEW POS: "); DEBUG_PRINTLN(newPosition);
   DEBUG_PRINT("REWARD: "); DEBUG_PRINTLN(reward);
 
-  oldPosition = newPosition;  
+  oldPosition = newPosition;  // Store current position for next iteration
 
-  
+//decrease alpha over time to decrease the effect of Q value updates 
   if (alpha >= alpha_final + alpha_step) //Increase e_greedy value ofer time to exploit more after some learning
     {
       alpha = alpha - alpha_step;
     }
   else {alpha = alpha_final;} 
   
-  //Q-Learning
+//Q-Learning
   max_q = Q[gw2state[newgwS1][newgwS2]][0];
    for (i = 1; i < 4; i++) { //compute possible max q value of new state
     if (Q[gw2state[newgwS1][newgwS2]][i] > max_q) {
@@ -271,18 +201,18 @@ reward = reward * movedir;
   delta_q = reward + (gamma * max_q) - Q[gw2state[gwS1][gwS2]][action];
   Q[gw2state[gwS1][gwS2]][action] = Q[gw2state[gwS1][gwS2]][action] + alpha * delta_q;
   
-  gwS2 = newgwS2;
+  gwS2 = newgwS2; //Store new state for next iteration
   gwS1 = newgwS1;
   
   for (h=0; h < (n_states[0]*n_states[1]); h++){
     for(i=0;i<4;i++){
-      Serial1.print(Q[h][i]);
-      Serial1.print(", ");
+      DEBUG_PRINT(Q[h][i]);
+      DEBUG_PRINT(", ");
     }
-    Serial1.println();
+    DEBUG_PRINTLN();
   }
 
-Serial1.println(j); 
+DEBUG_PRINTLN(j); 
 j++; 
 //delay(300);
 }
