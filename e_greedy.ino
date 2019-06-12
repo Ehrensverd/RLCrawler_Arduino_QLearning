@@ -31,7 +31,7 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[4]
           max_q = Q[i];
           action = i;
           }        
-        } DEBUG_PRINTLN(F("e-Greedy: Highest Q-Choice"));
+        } DEBUG_PRINTLN(F("e-Greedy: Highest Q-Choice")); DEBUG_PRINT("MAX Q: "); DEBUG_PRINTLN(max_q);
       n=0;
       for (i=0; i<4; i++)
         {
