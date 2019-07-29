@@ -4,17 +4,7 @@
 
 #define DEBUG //Uncomment for debugging mode
 
-#ifdef DEBUG
-#define DEBUG_PRINT(x)    Serial1.print(x)
-#define DEBUG_PRINTLN(x)  Serial1.println(x)
-#define DEBUG_DELAY(x)    delay(x)
-#else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINTLN(x)
-#define DEBUG_DELAY(x) 
-#endif
-
-
+#include "myFcns.h"
 //#define ENCODER_USE_INTERRUPTS
 #include <Encoder.h>
 #include <Servo.h>
@@ -64,7 +54,7 @@ bool go_backwards = true;
                                             {115, 120}, \
                                             {140, 150}}; 
                                           
-#define GW2STATE     int gw2state[5][5] = {{0, 1, 2, 3, 4}, \ 
+#define GW2STATE     int gw2state[5][5] = {{0, 1, 2, 3, 4}, \
                                             {5, 6, 7, 8, 9}, \
                                             {10, 11, 12, 13, 14}, \
                                             {15, 16, 17, 18, 19}, \
