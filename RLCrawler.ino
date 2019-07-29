@@ -1,6 +1,6 @@
 
-#include <MemoryFree.h>
-#include <pgmStrToRAM.h>
+//#include <MemoryFree.h>
+//#include <pgmStrToRAM.h>
 
 #define DEBUG //Uncomment for debugging mode
 
@@ -105,7 +105,7 @@ void setup() {
   S2.attach(5); //range 10 to 150; 90 is 45degree up-forward; 150 is forward-down; 10 is backwards-up 
   
   Serial1.begin(115200);
-  Serial1.println(F("*******************Start-up****************************"));
+  Serial1.println("*******************Start-up****************************");
 
   
   if(go_backwards)

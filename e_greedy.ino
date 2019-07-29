@@ -13,13 +13,13 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[4]
       e_greed = e_greed + e_greed_step;
       }
       else {e_greed = e_greed_final;}
-      DEBUG_PRINT(F("e-Greed: ")); DEBUG_PRINTLN(e_greed);
+      DEBUG_PRINT("e-Greed: "); DEBUG_PRINTLN(e_greed);
           
       //Exploration
       if (random(0, 100) > e_greed)
       { 
       action = random(0, 4);
-      DEBUG_PRINTLN(F("e-Greedy: Random Choice"));
+      DEBUG_PRINTLN("e-Greedy: Random Choice");
       }
       else //Exploitation
       { //find highest q value in current state
@@ -31,7 +31,7 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[4]
           max_q = Q[i];
           action = i;
           }        
-        } DEBUG_PRINTLN(F("e-Greedy: Highest Q-Choice")); DEBUG_PRINT("MAX Q: "); DEBUG_PRINTLN(max_q);
+        } DEBUG_PRINTLN("e-Greedy: Highest Q-Choice"); DEBUG_PRINT("MAX Q: "); DEBUG_PRINTLN(max_q);
       n=0;
       for (i=0; i<4; i++)
         {
@@ -45,12 +45,12 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[4]
         
       if(n >= 2)
         { 
-          DEBUG_PRINT(F("<- have equal high Q-values")); 
+          DEBUG_PRINT("<- have equal high Q-values"); 
           action = similar_max[random(0, n)];
-          DEBUG_PRINTLN(F("e-Greedy: Random action choice ot of multiple equal highest Q-Values"));
+          DEBUG_PRINTLN("e-Greedy: Random action choice ot of multiple equal highest Q-Values");
         } //if all q values in current state are zero, pick a random action
       }
-    DEBUG_PRINT(F("Action chosen: "));
+    DEBUG_PRINT("Action chosen: ");
     DEBUG_PRINTLN(action);
     
 
