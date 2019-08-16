@@ -16,7 +16,7 @@ long newPosition_hold = 0;
 long ms, ms_hold =0;
 int vel = 0;
 int vel_dt = 10; // dt in milliseconds for differentiate the wheel velocity from the rot_encoder position 
-int waitforservos = 70; // wait until the servos moved to new postion in milliseconds
+int waitforservos = 100; // wait until the servos moved to new postion in milliseconds
 
 float delta_q = 0;
 float max_q = 0;
@@ -33,15 +33,15 @@ int movedir;
 float del;
 
 int Q_init = 0; //Multiplicaton Factor to initialize QMATRIX
-float e_greed = 50;//93; // factor for  e-greedy action selection in range from 0-99; balance between exploration & exploitation
+float e_greed = 90;//93; // factor for  e-greedy action selection in range from 0-99; balance between exploration & exploitation
 float e_greed_final = 90; //98
 float e_greed_step = 0.015; //value with which the e_greed factor is increased in each iteration. This way exploring at the beginning and exploitation at the end can be achieved.
 float alpha = 0.3; //0.85 // Learn rate: Low-pass filter for changes of the entries of the q-matrix in presence of q-value update
 //float alpha_final = 0.5;
 //float alpha_step = 0.0005;
-float gamma = 0.8; // 0.5 at 9states worked 0.7 //discount factor of Q-value of next state
+float gamma = 0.95; // 0.5 at 9states worked 0.7 //discount factor of Q-value of next state
 
-bool go_backwards = true;
+bool go_backwards = false;
 
 #define TWENTYFIVE_STATES
 #ifdef TWENTYFIVE_STATES
@@ -160,9 +160,9 @@ void loop() {
       S1.write(servopos[gwS1][0] - i);
     }
 
-    if (abs(servopos[newgwS1][0] - servopos[gwS1][0]) - i <= 12 && abs(servopos[newgwS1][0] - servopos[gwS1][0]) - i >= 1)
+    if (abs(servopos[newgwS1][0] - servopos[gwS1][0]) - i <= 25 && abs(servopos[newgwS1][0] - servopos[gwS1][0]) - i >= 1)
     {
-      del = ((55.0 / 12.0) / 12.0) * (k * k); // ((final_delay/delta_steps)/delta_steps)*step^2
+      del = ((25.0 / 25.0) / 25.0) * ((k+5) * (k+5)); // ((final_delay/delta_steps)/delta_steps)*step^2
       k++;
     }
     else
@@ -186,7 +186,7 @@ void loop() {
     del = ((2.0 / abs(servopos[newgwS2][1] - servopos[gwS2][1])) / abs(servopos[newgwS2][1] - servopos[gwS2][1])) * (i * i); // ((final_delay/delta_steps)/delta_steps)*step^2
     delay((int)del);
   }
-  ////delay(waitforservos);
+  delay(waitforservos);
 
 //Measure change in Position with the rotary encoder
    k=0;
@@ -217,6 +217,9 @@ void loop() {
 //Observe Reward
   reward = newPosition - oldPosition;
   reward = reward * movedir; // Negate reward when moving backwards is selected
+  reward = (reward/100); //scale rewards a bit
+  reward = reward * reward * reward; //emphasize larger rewards
+  reward = reward - 20; //give a penalty of -20 for each step to keep the bot from ideling 
 
   DEBUG_PRINT("OLD POS: "); DEBUG_PRINTLN(oldPosition);
   DEBUG_PRINT("NEW POS: "); DEBUG_PRINTLN(newPosition);
