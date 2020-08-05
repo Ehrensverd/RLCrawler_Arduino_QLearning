@@ -47,7 +47,7 @@ float sine_states[state_size][state_types];
 
 // servo and angles
 const int min_max_angles[2][2] = {{40, 140}, {30, 150}};
-const int SERVO_STEPS = 300; // amount of servo steps per iteration. less = larger angular intervals
+const int SERVO_STEPS = 270; // amount of servo steps per iteration. less = larger angular intervals
 int angle_delta[2]; // distance between min and max servo angles, used for partitioning sinus amplitudes
 double s2_old_angle;
 double radii[SERVO_STEPS];
@@ -131,10 +131,10 @@ void setup() {
       Serial1.print("Random Seed: ");
       Serial1.println(abs(rnd_seed));
 
-      /* //random initial state
+       //random initial state
       gwS1 = random(0, n_states[0]);
       gwS2 = random(0, n_states[1]);
-      gw_phase = random(0, n_states[2]);*/
+      gw_phase = random(0, n_states[2]);
 
 
       S1.write(100);
@@ -191,7 +191,7 @@ void loop() {
 
     // motor iteration
     double next_angle, next_angle_2;
-    int servo_delay = 15;
+    int servo_delay = 10;
    
     for (i = 0 ; i < SERVO_STEPS ; i++){
         // S1
