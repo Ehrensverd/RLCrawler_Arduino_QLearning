@@ -17,8 +17,7 @@ float max_q = 0;
 
 float reward =0;
 
-int gwS1, gwS2, gw_phase, newgwS1, newgwS2, newgw_phase; //gridworld state of Servo 1
-gwS1 = gwS2 = gw_phase = newgwS1 = newgwS2 = newgw_phase = 0;
+int gwS1, gwS2, gw_phase, newgwS1, newgwS2, newgw_phase = gwS1 = gwS2 = gw_phase = newgwS1 = newgwS2 = newgw_phase = 0;
 
 int movedir;
 float del;
@@ -36,18 +35,27 @@ bool go_backwards = false;
 const int phase_shift = 0;
 const int servo_1 = 1;
 const int servo_2 = 2; // state_space_high[servo_1] and angle_delta[servo_1] vs state_space_high[1] and angle_delta[0]
+ int old_state = 0;
+ int new_state = 0; // only for readability
+    bool phased = false;
+    bool sine2_amped = false;
+
 
 // State variables
-int n_states[3] = {5, 5, 5}; //{Servo2_phaseshift, Servo1_amplitude, Servo2_amplitude, } %
-const int state_size = 5;  // amount of states per of a state type
+const int state_size = 2;  // amount of states per of a state type
+int n_states[3] = {state_size, state_size, state_size}; //{Servo2_phaseshift, Servo1_amplitude, Servo2_amplitude, } %
+
 const int state_types = 3;
 const int state_space = pow(state_size, state_types);
 double state_space_high[2]; // highest sinus amplitude state
 float sine_states[state_size][state_types];
 
 // servo and angles
-const int min_max_angles[2][2] = {{40, 140}, {30, 150}};
-const int SERVO_STEPS = 270; // amount of servo steps per iteration. less = larger angular intervals
+  
+const int servo_delay = 8;
+double next_angle, next_angle_2;
+const int min_max_angles[2][2] = {{30, 170}, {20, 155}};
+const int SERVO_STEPS = 300; // amount of servo steps per iteration. less = larger angular intervals
 int angle_delta[2]; // distance between min and max servo angles, used for partitioning sinus amplitudes
 double s2_old_angle;
 double radii[SERVO_STEPS];
@@ -58,8 +66,8 @@ int gw2state[state_size][state_size][state_size]; // [phase_shift][servo_1][serv
 // actions                                              // 0 = do nothing
 const int actions = 7;                                  // 1 = phase_shift--
 int action;                                             // 2 = phase_shift++
-float Q_currentState[actions] = {0};                    // 3 = s1--
-bool is_invalid[actions];                               // 4 = s1++
+float Q_currentState[actions] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, };                    // 3 = s1--
+bool is_invalid[actions] = {false, false, false, false, false, false, false, };                               // 4 = s1++
                                                         // 5 = s2--
                                                         // 6 = s2++
 
@@ -67,23 +75,32 @@ bool is_invalid[actions];                               // 4 = s1++
 float Q[state_space][actions];
 
 void setup() {  
-    while (!Serial);   // wait for serial port to connect. Needed for Native USB only
-
+   // while (!Serial){};   // wait for serial port to connect. Needed for Native USB only
+  Serial.begin(115200);
     // calculate max amplitude and angle delta for sinus states.
+     Serial.println("state space:" + String(state_space));
+    Serial.println("Angle deltas");
     for (i = 0 ; i < 2 ; i ++ ){
                                 //servo min    + servo max
         angle_delta[i] = (min_max_angles[i][0] + min_max_angles[i][1])/2.0;
-        state_space_high[i] = (min_max_angles[i][1] - angle_delta[i])/100.0; //
+        state_space_high[i] = (min_max_angles[i][1] - angle_delta[i]); //
+
+        Serial.println("delta:" + String(angle_delta[i]) + "  S high:" + String(state_space_high[i]));
+      
     }
     // min max sine_amplitude *2 , phase_shift
     float low_high[2][3] = {{0, 0.2,  0.2}, {1.6, state_space_high[0],  state_space_high[1]}};
 
     // state step distance = (high-low)/state_size - 1. //default: Servo1: 0.1, 0.275, 0.45, 0.625, 0.8 |  Servo2: 0.1, 0.25, 0.4, 0.55, 0.7 |   phase_shift: 0, 0.4, 0.8, 1.2, 1.6.   | phase 2 and 0 are same phase
+    Serial.println("Sine state table");
     for(i = 0 ; i < state_size; i++){
         for (j = 0 ; j < state_types; j++ ){   //      distance
                                        // base + ( max ampl        -  min ampl ) /                   *   index)
             sine_states[i][j] = low_high[0][j] + (((low_high[1][j] - low_high[0][j]) / (state_size-1)) * i);
+            Serial.print(sine_states[i][j]);
+            Serial.print(" | ");
         }
+        Serial.println();
     }
     //gridworld indices to state populating. from 0 to state_space-1 
     for (i = 0, n = 0 ; i < state_size ; i++){
@@ -110,9 +127,9 @@ void setup() {
     S1.attach(6); //range 20 to 180
     S2.attach(5); //range 10 to 150; 90 is 45degree up-forward; 150 is forward-down; 10 is backwards-up
 
-  
-      Serial1.begin(115200);
-      Serial1.println("*******************Start-up****************************");
+      
+    Serial1.begin(115200);
+     Serial1.println("*******************Start-up****************************");
 
       // sets which direction to reward
       movedir = go_backwards ? -1 : 1;
@@ -128,8 +145,8 @@ void setup() {
         }
         randomSeed(abs(rnd_seed));
       }
-      Serial1.print("Random Seed: ");
-      Serial1.println(abs(rnd_seed));
+     // Serial1.print("Random Seed: ");
+    //  Serial1.println(abs(rnd_seed));
 
        //random initial state
       gwS1 = random(0, n_states[0]);
@@ -146,14 +163,16 @@ void setup() {
 
 void loop() {
 
-    int old_state = gw2state[gw_phase][gwS1][gwS2];
-    bool phased = false;
+    old_state = gw2state[gw_phase][gwS1][gwS2];
+    phased = false;
     Serial1.println("Sine ampitudes");
     Serial1.println("s1:" + String(sine_states[newgwS1][servo_1]) + "s2:" + String(sine_states[newgwS2][servo_2]) + "phase:" + String(sine_states[newgw_phase][phase_shift]) );
 
+    
     // get current state Q table actions
-    Q_currentState = Q[old_state];
-
+    for(i=0;i<7;i++){Q_currentState[i] = Q[old_state][i];}
+ 
+    
     // check fo invalid actions. 0, 1 and 2 allways valid
     is_invalid[3] = (gwS1 == 0);
     is_invalid[4] = (gwS1 == state_size-1);
@@ -182,41 +201,58 @@ void loop() {
         break;
      case 5:  // servo 2 
         newgwS2--;
+        sine2_amped = true;
         break;
     case 6:
         newgwS2++;
+        sine2_amped = true;
         break;    
     }
-    int new_state = gw2state[newgw_phase][newgwS1][newgwS2]; // only for readability
+   new_state = gw2state[newgw_phase][newgwS1][newgwS2]; // only for readability
 
     // motor iteration
-    double next_angle, next_angle_2;
-    int servo_delay = 10;
+
    
     for (i = 0 ; i < SERVO_STEPS ; i++){
         // S1
-        next_angle = (((sin(radii[i]) * sine_states[newgwS1][servo_1]))*100)+angle_delta[servo_1];
+        next_angle = ((sin(radii[i]) * sine_states[newgwS1][servo_1]))+angle_delta[0];
         //Serial.print("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle)));
         Serial.println(next_angle); // for serial plotter
         Serial.print(",");
         S1.write(next_angle);
 
         // S2
-        next_angle_2 = (((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))*100)+angle_delta[servo_2];
+        next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
+
+          if(sine2_amped){
+          next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[gwS2][servo_2] ))+angle_delta[1];
+          if(abs(next_angle_2 - angle_delta[1])<1){
+            sine2_amped = false;
+            }
+          } else {
+        next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
+          }
+
+        
         // if phase_shifted wait till old S2 angle matches new
         if(phased){
-            Serial.println(s2_old_angle);
-            if(abs(s2_old_angle - next_angle_2) < 4){
+         
+                Serial.println(s2_old_angle);
+                  
+            
+            if(abs(s2_old_angle - next_angle_2) < 2){
                 phased = false;
-            }
+            } 
         } else {
             Serial.println(next_angle_2);
             S2.write(next_angle_2);
       }
+       
         delay(servo_delay);
 
     }
     phased = false;
+        sine2_amped = false;
     s2_old_angle = next_angle_2;
 
     //Measure change in Position with the rotary encoder
@@ -232,7 +268,7 @@ void loop() {
        
             if(abs(vel) < 300){
                 newPosition_hold = newPosition;
-                Serial1.println("BREAK");
+   //             Serial1.println("BREAK");
                 break;
           }
             newPosition_hold = newPosition;
@@ -245,7 +281,7 @@ void loop() {
     reward = (reward/100); //scale rewards a bit
     reward = reward * reward * reward; //emphasize larger rewards
     reward = reward - 200; //give a penalty of -20 for each step to keep the bot from ideling
-    Serial1.println(reward);
+//    Serial1.println(reward);
 
     // Store current position for next iteration
     oldPosition = newPosition;
