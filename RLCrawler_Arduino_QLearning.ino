@@ -288,11 +288,8 @@ void loop() {
     reward = newPosition - oldPosition;
     reward = reward * movedir; // Negate reward when moving backwards is selected
     reward = (reward/100); //scale rewards a bit
-    if(action == 0){ // Do nothing has larger emphesize than other actions
-        reward = pow(reward, 4);
-      } else {
-        reward = pow(reward, 3);
-    } //emphasize larger rewards
+  
+    reward = pow(reward, 3);     //emphasize larger rewards
     reward = reward - 100; //give a penalty of -20 for each step to keep the bot from ideling
    Serial1.println(reward);
 
