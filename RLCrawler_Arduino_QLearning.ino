@@ -14,7 +14,7 @@ int vel_dt = 10; // dt in milliseconds for differentiate the wheel velocity from
 
 float delta_q = 0;
 float max_q = 0;
-
+float vertical = 160;
 float reward =0;
 
 int gwS1, gwS2, gw_phase, newgwS1, newgwS2, newgw_phase = gwS1 = gwS2 = gw_phase = newgwS1 = newgwS2 = newgw_phase = 0;
@@ -42,7 +42,7 @@ const int servo_2 = 2; // state_space_high[servo_1] and angle_delta[servo_1] vs 
 
 
 // State variables
-const int state_size = 2;  // amount of states per of a state type
+const int state_size = 5;  // amount of states per of a state type
 int n_states[3] = {state_size, state_size, state_size}; //{Servo2_phaseshift, Servo1_amplitude, Servo2_amplitude, } %
 
 const int state_types = 3;
@@ -54,10 +54,10 @@ float sine_states[state_size][state_types];
   
 const int servo_delay = 8;
 double next_angle, next_angle_2;
-const int min_max_angles[2][2] = {{30, 170}, {20, 155}};
-const int SERVO_STEPS = 300; // amount of servo steps per iteration. less = larger angular intervals
+const int min_max_angles[2][2] = {{40, 140}, {30, 150}};
+const int SERVO_STEPS = 210; // amount of servo steps per iteration. less = larger angular intervals
 int angle_delta[2]; // distance between min and max servo angles, used for partitioning sinus amplitudes
-double s2_old_angle;
+double s2_old_angle = 90;
 double radii[SERVO_STEPS];
 
 // All possible states. 0 to  state_space -1.
@@ -89,14 +89,18 @@ void setup() {
       
     }
     // min max sine_amplitude *2 , phase_shift
-    float low_high[2][3] = {{0, 0.2,  0.2}, {1.6, state_space_high[0],  state_space_high[1]}};
+    float low_high[2][3] = {{0, 20,  20}, {2, state_space_high[0],  state_space_high[1]}};
 
     // state step distance = (high-low)/state_size - 1. //default: Servo1: 0.1, 0.275, 0.45, 0.625, 0.8 |  Servo2: 0.1, 0.25, 0.4, 0.55, 0.7 |   phase_shift: 0, 0.4, 0.8, 1.2, 1.6.   | phase 2 and 0 are same phase
     Serial.println("Sine state table");
     for(i = 0 ; i < state_size; i++){
         for (j = 0 ; j < state_types; j++ ){   //      distance
                                        // base + ( max ampl        -  min ampl ) /                   *   index)
+            if(j==0){
+               sine_states[i][j] = low_high[0][j] + (((low_high[1][j] - low_high[0][j]) / (state_size)) * i); // phase shift resyncs at 2, so we dont include it.
+              } else {
             sine_states[i][j] = low_high[0][j] + (((low_high[1][j] - low_high[0][j]) / (state_size-1)) * i);
+            }
             Serial.print(sine_states[i][j]);
             Serial.print(" | ");
         }
@@ -154,8 +158,9 @@ void setup() {
       gw_phase = random(0, n_states[2]);
 
 
-      S1.write(100);
-      S2.write(80);
+      S1.write(angle_delta[0]);
+      S2.write(angle_delta[1]);
+      s2_old_angle = angle_delta[1] +10;
       delay(1000);
 
       newPosition_hold = rot_encoder.read();
@@ -212,49 +217,52 @@ void loop() {
 
     // motor iteration
 
-   
+    
+    
     for (i = 0 ; i < SERVO_STEPS ; i++){
         // S1
         next_angle = ((sin(radii[i]) * sine_states[newgwS1][servo_1]))+angle_delta[0];
         //Serial.print("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle)));
+        
         Serial.println(next_angle); // for serial plotter
         Serial.print(",");
         S1.write(next_angle);
+           delay(servo_delay);
 
         // S2
-        next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
-
-          if(sine2_amped){
-          next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[gwS2][servo_2] ))+angle_delta[1];
-          if(abs(next_angle_2 - angle_delta[1])<1){
-            sine2_amped = false;
-            }
-          } else {
-        next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
-          }
-
-        
-        // if phase_shifted wait till old S2 angle matches new
-        if(phased){
-         
-                Serial.println(s2_old_angle);
-                  
+       // next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
+           next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
+           
+          if(sine2_amped){ 
+              next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[gwS2][servo_2] ))+angle_delta[1];
+              if(abs(next_angle_2 - angle_delta[1])<1){
+                  sine2_amped = false;
+              }
+          } 
+          else if(phased){
+           // if phase_shifted wait till old S2 angle matches new
+            // Serial.println(s2_old_angle);
+               // next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[gw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];    
             
-            if(abs(s2_old_angle - next_angle_2) < 2){
-                phased = false;
-            } 
-        } else {
+              if(abs(s2_old_angle - next_angle_2) < 1){
+                  phased = false;
+              } 
+          next_angle_2 = s2_old_angle;
+          }
+        
+        
+            //Serial.println("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle))+ "| S2: " + String(int(next_angle_2))+ "| ph: " + String(sine_states[newgw_phase][phase_shift]));
             Serial.println(next_angle_2);
             S2.write(next_angle_2);
-      }
+      
        
         delay(servo_delay);
 
     }
     phased = false;
-        sine2_amped = false;
+    sine2_amped = false;
     s2_old_angle = next_angle_2;
-
+    
     //Measure change in Position with the rotary encoder
     //newPosition = rot_encoder.read();
     ms_hold = millis();
@@ -280,7 +288,7 @@ void loop() {
     reward = reward * movedir; // Negate reward when moving backwards is selected
     reward = (reward/100); //scale rewards a bit
     reward = reward * reward * reward; //emphasize larger rewards
-    reward = reward - 200; //give a penalty of -20 for each step to keep the bot from ideling
+    reward = reward - 100; //give a penalty of -20 for each step to keep the bot from ideling
 //    Serial1.println(reward);
 
     // Store current position for next iteration
