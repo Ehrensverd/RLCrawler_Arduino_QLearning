@@ -1,7 +1,7 @@
 #include <Encoder.h>
 #include <Servo.h>
 #include <math.h>
-Servo S1, S2;
+Servo S1, S2, S3;
 Encoder rot_encoder(2, 3); //avoid using pins with LEDs attached
 
 int h,i,j,k,n=0;
@@ -52,7 +52,7 @@ float sine_states[state_size][state_types];
 
 // servo and angles
   
-const int servo_delay = 8;
+int servo_delay = 8;
 double next_angle, next_angle_2;
 const int min_max_angles[2][2] = {{40, 140}, {30, 150}};
 const int SERVO_STEPS = 210; // amount of servo steps per iteration. less = larger angular intervals
@@ -130,7 +130,7 @@ void setup() {
     
     S1.attach(6); //range 20 to 180
     S2.attach(5); //range 10 to 150; 90 is 45degree up-forward; 150 is forward-down; 10 is backwards-up
-
+    S3.attach(4);
       
     Serial1.begin(115200);
      Serial1.println("*******************Start-up****************************");
@@ -161,6 +161,7 @@ void setup() {
 
       S1.write(angle_delta[0]);
       S2.write(angle_delta[1]);
+      S3.write(90);
       s2_old_angle = angle_delta[1] +10;
       delay(1000);
 
@@ -321,10 +322,43 @@ void loop() {
 
 
     if (Serial1.available()){
-      int temp =  Serial1.read();
-      if(temp == 0 || temp == 1){
-        movedir = temp ? 1 : -1;
-        }
+      int BT_out =  Serial1.read();
+         switch (BT_out) {
+    case 0:  // phase shift has no min max, its circular
+          movedir = -1;
+         break;
+    case 1:  // phase shift has no min max, its circular
+          movedir = 1;
+        break;
+    case 2:
+        for (i= 90; i >=65; i -= 1) {
+          S3.write(i);          
+          delay(15);                   
+      }
+        break;
+    case 3:  // servo 1 
+       for (i= 65; i <= 90; i += 1) {
+          S3.write(i);          
+          delay(15);                   
+      }
+      
+        break;
+ 
+    case 4:  // phase shift has no min max, its circular
+          if(servo_delay >= 4){
+              servo_delay--;
+            }
+        
+         break;
+    case 5:  // phase shift has no min max, its circular
+            servo_delay++;
+        break;
+         case 7:
+         while(Serial1.read()!= 6);
+    
+        break;
+         }
+         
          Serial1.flush();
         }
   // Keep reading from Arduino Serial Monitor and send to HC-05
