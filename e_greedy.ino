@@ -11,10 +11,13 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7]
  
     //Exploration
     if (random(0, 100) > e_greed) {
-       do { action = random(0, 7);
+         Serial.println("Exploring");
+   
+       do { action = random(7);
        } while(is_invalid[action]); // chose random valid action.
     } else { 
     //Exploitation 
+    Serial.println("Exploiting");
             max_q = Q[0];     // find highest q value in current state, action 0 always valid
         for (int i = 1 ; i < 7 ; i++){
             if(!is_invalid[i] && Q[i] > max_q){ 
@@ -31,11 +34,11 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7]
             }
         }
         if(n >= 2){ 
-            action = similar_max[random(0, n)];
+            action = similar_max[random(n)];
           } 
       }
           
-    
+    Serial.println("Action:" + String(action));
     return action;
 }
       

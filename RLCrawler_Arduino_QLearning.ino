@@ -149,14 +149,15 @@ void setup() {
         }
         randomSeed(abs(rnd_seed));
       }
-     // Serial1.print("Random Seed: ");
-    //  Serial1.println(abs(rnd_seed));
+      Serial1.print("Random Seed: ");
+      Serial1.println(abs(rnd_seed));
 
        //random initial state
       gwS1 = random(0, n_states[0]);
       gwS2 = random(0, n_states[1]);
       gw_phase = random(0, n_states[2]);
-
+      Serial1.print("Random initial state: ");
+      Serial1.println(gw2state[gw_phase][gwS1][gwS2]);
 
       S1.write(angle_delta[0]);
       S2.write(angle_delta[1]);
@@ -224,8 +225,8 @@ void loop() {
         next_angle = ((sin(radii[i]) * sine_states[newgwS1][servo_1]))+angle_delta[0];
         //Serial.print("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle)));
         
-        Serial.println(next_angle); // for serial plotter
-        Serial.print(",");
+        //Serial.println(next_angle); // for serial plotter
+        //Serial.print(",");
         S1.write(next_angle);
            delay(servo_delay);
 
@@ -252,7 +253,7 @@ void loop() {
         
         
             //Serial.println("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle))+ "| S2: " + String(int(next_angle_2))+ "| ph: " + String(sine_states[newgw_phase][phase_shift]));
-            Serial.println(next_angle_2);
+           // Serial.println(next_angle_2);
             S2.write(next_angle_2);
       
        
@@ -264,7 +265,7 @@ void loop() {
     s2_old_angle = next_angle_2;
     
     //Measure change in Position with the rotary encoder
-    //newPosition = rot_encoder.read();
+
     ms_hold = millis();
     // wait and measure as long as the velocity is above "vel"
     while(true) {
@@ -276,7 +277,7 @@ void loop() {
        
             if(abs(vel) < 300){
                 newPosition_hold = newPosition;
-   //             Serial1.println("BREAK");
+             Serial1.println("BREAK");
                 break;
           }
             newPosition_hold = newPosition;
@@ -287,9 +288,13 @@ void loop() {
     reward = newPosition - oldPosition;
     reward = reward * movedir; // Negate reward when moving backwards is selected
     reward = (reward/100); //scale rewards a bit
-    reward = reward * reward * reward; //emphasize larger rewards
+    if(action == 0){ // Do nothing has larger emphesize than other actions
+        reward = pow(reward, 4);
+      } else {
+        reward = pow(reward, 3);
+    } //emphasize larger rewards
     reward = reward - 100; //give a penalty of -20 for each step to keep the bot from ideling
-//    Serial1.println(reward);
+   Serial1.println(reward);
 
     // Store current position for next iteration
     oldPosition = newPosition;
@@ -317,4 +322,16 @@ void loop() {
     gwS1 = newgwS1;
     gw_phase = newgw_phase;
 
+
+    if (Serial1.available()){
+      int temp =  Serial1.read();
+      if(temp == 0 || temp == 1){
+        movedir = temp ? 1 : -1;
+        }
+         Serial1.flush();
+        }
+  // Keep reading from Arduino Serial Monitor and send to HC-05
+
+   
+     Serial.println(movedir);
 }
