@@ -54,7 +54,7 @@ float sine_states[state_size][state_types];
   
 int servo_delay = 8;
 double next_angle, next_angle_2;
-const int min_max_angles[2][2] = {{40, 140}, {30, 150}};
+const int min_max_angles[2][2] = {{50, 150}, {30, 150}};
 const int SERVO_STEPS = 210; // amount of servo steps per iteration. less = larger angular intervals
 int angle_delta[2]; // distance between min and max servo angles, used for partitioning sinus amplitudes
 double s2_old_angle = 90;
