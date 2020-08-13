@@ -146,17 +146,11 @@ void setup() {
 
        //random initial state
       gwS1 = random(state_size);
-      if(gwS1<0 || gwS1 >= state_size){
-          gwS1 = 0;
-      }
+      newgwS1 = gwS1;
       gwS2 = random(state_size);
-      if(gwS2<0 || gwS2 >= state_size){
-          gwS2 = 0;
-      }
+      newgwS2 = gwS2;
       gw_phase = random(state_size);
-      if(gw_phase<0 || gw_phase >= state_size){
-          gw_phase = 0;
-      }
+      newgw_phase = gw_phase;
 
       S1.write(angle_delta[0]);
       S2.write(angle_delta[1]);
@@ -306,10 +300,10 @@ void loop() {
     reward = (reward/100); //scale rewards a bit
   
     reward = pow(reward, 3);     //emphasize larger rewards
-    reward = reward - 100; //give a penalty of -20 for each step to keep the bot from ideling
+    reward = reward - 200; //give a penalty  each step to keep the bot from ideling
     if(!plotting){
-    Serial1.println("Reward:" + String(reward));
-    Serial1.println();
+    Serial1.println("         Reward:" + String(reward));
+   
     }
     // Store current position for next iteration
     oldPosition = newPosition;
@@ -373,6 +367,13 @@ void loop() {
            servo_delay++;
            Serial1.println("Slower speed. Current servo delay:" + String(servo_delay));
         break;
+
+    case 6:  // phase shift has no min max, its circular
+         Serial1.println("Resetting Arduino");
+             resetFunc();
+            break;
+    
+
     case 7:   // start stop
             Serial1.println("Stopped");
             while(int(Serial1.read())!= 7){
@@ -432,7 +433,7 @@ void print_info(){
 
       Serial1.print("Random Seed: ");
       Serial1.println(abs(rnd_seed));
-      Serial1.print("Random initial state: " );
+      Serial1.print("Current gw state: " );
       Serial1.println(gw2state[gw_phase][gwS1][gwS2]);
       Serial1.println("gw_phase: " + String(gw_phase) +" | gwS1:" + String(gwS1) + " | gwS2:"+ String(gwS2) );
       Serial1.println(gw2state[gw_phase][gwS1][gwS2]);
@@ -463,3 +464,6 @@ void print_Q() {
         }
     }
 }
+
+
+void(* resetFunc) (void) = 0; // reset function

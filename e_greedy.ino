@@ -44,7 +44,7 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7]
 
           if(!plotting){
          
-         Serial1.println("Action:" + String(action) + " - Exploiting");
+         Serial1.println("Action:" + String(action) + " - Exploiting: max Q:" + max_q);
           }
       }
           
