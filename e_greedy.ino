@@ -1,5 +1,5 @@
 
-int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7], bool is_invalid[7]){
+int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7], bool is_invalid[7], bool plotting){
     
     int action = 0;
     int n = 0;
@@ -11,13 +11,17 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7]
  
     //Exploration
     if (random(0, 100) > e_greed) {
-         Serial.println("Exploring");
-   
+  
        do { action = random(7);
        } while(is_invalid[action]); // chose random valid action.
+
+           if(!plotting){
+       
+         Serial1.println("Action:" + String(action) + " - Exploring");
+      }
     } else { 
     //Exploitation 
-    Serial.println("Exploiting");
+    
             max_q = Q[0];     // find highest q value in current state, action 0 always valid
         for (int i = 1 ; i < 7 ; i++){
             if(!is_invalid[i] && Q[i] > max_q){ 
@@ -36,9 +40,15 @@ int e_greedy(float &e_greed, float e_greed_final, float e_greed_step, float Q[7]
         if(n >= 2){ 
             action = similar_max[random(n)];
           } 
+
+
+          if(!plotting){
+         
+         Serial1.println("Action:" + String(action) + " - Exploiting");
+          }
       }
           
-    Serial.println("Action:" + String(action));
+    
     return action;
 }
       

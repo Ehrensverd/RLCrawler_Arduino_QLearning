@@ -174,11 +174,7 @@ void loop() {
     old_state = gw2state[gw_phase][gwS1][gwS2];
     phased = false;
 
-     if(!plotting){
-        Serial1.println();
-        Serial1.println("s1:" + String(newgwS1) + " | value:" + String(sine_states[newgwS1][servo_1]) + "\ns2:" + String(newgwS2) + " | value:" + String(sine_states[newgwS2][servo_2]) +"\nps:" + String(newgw_phase)  +" | value:" + String(sine_states[newgw_phase][phase_shift]) );
-
-     }
+   
     // get current state Q table actions
     for(i=0;i<7;i++){Q_currentState[i] = Q[old_state][i];}
  
@@ -190,7 +186,7 @@ void loop() {
     is_invalid[6] = (gwS2 == state_size-1);
 
     //Pick an action by e-greedy policy
-    action = e_greedy(e_greed, e_greed_final, e_greed_step, Q_currentState, is_invalid);
+    action = e_greedy(e_greed, e_greed_final, e_greed_step, Q_currentState, is_invalid, plotting);
 
     // Update state changed by action.
     // action 0 does no changes. ie. repeat last state.
@@ -218,8 +214,12 @@ void loop() {
         sine2_amped = true;
         break;    
     }
-   new_state = gw2state[newgw_phase][newgwS1][newgwS2]; // only for readability
+    new_state = gw2state[newgw_phase][newgwS1][newgwS2]; // only for readability
 
+
+      if(!plotting){
+        Serial1.println("s1:" + String(newgwS1) + "|s2:" + String(newgwS2) + "|ps:" + String(newgw_phase) );
+     }
     // motor iteration
 
     
@@ -254,7 +254,7 @@ void loop() {
       
        
         delay(servo_delay);
-    if(plotting){
+    if(plotting && i%5 == 0){
 
             Serial1.print("Graph:");
             Serial1.print(next_angle);
@@ -270,8 +270,15 @@ void loop() {
     s2_old_angle = next_angle_2;
 
      // flush buffer
-     if(plotting){
+     if(plotting  && Serial1.available()){
+        if(int(Serial1.read()) == 1){
+          plotting = false;
+          Serial1.println("Stopping graph plotting");
+          } 
+
+      
      while(Serial1.read() >= 0);
+
      }
     //Measure change in Position with the rotary encoder
 
@@ -301,7 +308,8 @@ void loop() {
     reward = pow(reward, 3);     //emphasize larger rewards
     reward = reward - 100; //give a penalty of -20 for each step to keep the bot from ideling
     if(!plotting){
-    Serial1.println("           Reward:" + String(reward));
+    Serial1.println("Reward:" + String(reward));
+    Serial1.println();
     }
     // Store current position for next iteration
     oldPosition = newPosition;
@@ -330,7 +338,7 @@ void loop() {
     gw_phase = newgw_phase;
 
 
-    if (Serial1.available()){
+    if (!plotting && Serial1.available()){
       int BT_out =  Serial1.read();
          switch (BT_out) {
     case 0:  // change direction
@@ -338,8 +346,8 @@ void loop() {
           movedir == -1 ? Serial1.println("Going backwards") :Serial1.println("Going forwards");
           break;
     case 1:  //  plotting on off
-          plotting = (plotting==false);
-          plotting ? Serial1.println("Starting graph plotting") :Serial1.println("Stopping graph plotting");
+          plotting = true;
+          Serial1.println("Starting graph plotting"); 
           break;
      
     case 2:
@@ -367,12 +375,13 @@ void loop() {
         break;
     case 7:   // start stop
             Serial1.println("Stopped");
-            while(Serial1.read()!= 7){
-                if(Serial1.read() == 9){
+            while(int(Serial1.read())!= 7){
+                if(int(Serial1.read()) == 9){
                     print_Q();
-                } else if(Serial1.read() == 10){
+                } else if(int(Serial1.read()) == 10){
                     print_info();
                 }
+                while(Serial1.read() >= 0);
              }
             Serial1.println("Starting");
     
@@ -430,6 +439,7 @@ void print_info(){
 
 
         Serial1.println("INFO END");
+        while(Serial1.read() >= 0);
   }
 
 
