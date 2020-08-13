@@ -75,6 +75,8 @@ bool is_invalid[actions] = {false, false, false, false, false, false, false, }; 
 // Q table. Q ( state , action )
 float Q[state_space][actions];
 
+void(* resetFunc) (void) = 0; // reset function
+
 void setup() {  
    // while (!Serial){};   // wait for serial port to connect. Needed for Native USB only
   Serial1.begin(115200);
@@ -212,7 +214,7 @@ void loop() {
 
 
       if(!plotting){
-        Serial1.println("s1:" + String(newgwS1) + "|s2:" + String(newgwS2) + "|ps:" + String(newgw_phase) );
+        Serial1.println("|" +String(newgw_phase) + "|" +  String(newgwS1) + "|" + String(newgwS2)  + "|" );
      }
     // motor iteration
 
@@ -302,7 +304,7 @@ void loop() {
     reward = pow(reward, 3);     //emphasize larger rewards
     reward = reward - 200; //give a penalty  each step to keep the bot from ideling
     if(!plotting){
-    Serial1.println("         Reward:" + String(reward));
+    Serial1.println("Rewarded:" + String(reward));
    
     }
     // Store current position for next iteration
@@ -464,6 +466,3 @@ void print_Q() {
         }
     }
 }
-
-
-void(* resetFunc) (void) = 0; // reset function
