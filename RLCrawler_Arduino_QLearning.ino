@@ -39,7 +39,7 @@ const int servo_2 = 2; // state_space_high[servo_1] and angle_delta[servo_1] vs 
  int new_state = 0; // only for readability
     bool phased = false;
     bool sine2_amped = false;
-
+    bool plotting = false;
 
 // State variables
 const int state_size = 5;  // amount of states per of a state type
@@ -172,8 +172,8 @@ void loop() {
 
     old_state = gw2state[gw_phase][gwS1][gwS2];
     phased = false;
-    Serial1.println("Sine ampitudes");
-    Serial1.println("s1:" + String(sine_states[newgwS1][servo_1]) + "s2:" + String(sine_states[newgwS2][servo_2]) + "phase:" + String(sine_states[newgw_phase][phase_shift]) );
+    //Serial1.println("Sine ampitudes");
+    // Serial1.println("s1:" + String(sine_states[newgwS1][servo_1]) + "s2:" + String(sine_states[newgwS2][servo_2]) + "phase:" + String(sine_states[newgw_phase][phase_shift]) );
 
     
     // get current state Q table actions
@@ -226,13 +226,13 @@ void loop() {
         next_angle = ((sin(radii[i]) * sine_states[newgwS1][servo_1]))+angle_delta[0];
         //Serial.print("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle)));
         
-        //Serial.println(next_angle); // for serial plotter
-        //Serial.print(",");
+       // Serial1.println(next_angle); // for serial plotter
+       // Serial1.print(",");
         S1.write(next_angle);
            delay(servo_delay);
 
         // S2
-       // next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
+      
            next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[newgw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];
            
           if(sine2_amped){ 
@@ -243,7 +243,7 @@ void loop() {
           } 
           else if(phased){
            // if phase_shifted wait till old S2 angle matches new
-            // Serial.println(s2_old_angle);
+            // Serial1.println(s2_old_angle);
                // next_angle_2 = ((sin(radii[i]+ (M_PI*sine_states[gw_phase][phase_shift])) * sine_states[newgwS2][servo_2] ))+angle_delta[1];    
             
               if(abs(s2_old_angle - next_angle_2) < 1){
@@ -251,10 +251,16 @@ void loop() {
               } 
           next_angle_2 = s2_old_angle;
           }
-        
-        
+          if(plotting){
+
+          Serial1.print("Graph:");
+          Serial1.print(next_angle);
+         Serial1.print("|");
+         Serial1.print(next_angle_2);
+          Serial1.print("$");
+          }
             //Serial.println("phs:" + String(newgw_phase) +"|s1:"+ String(newgwS1) + "|s2:"+ String(newgwS2) + "| S1: " + String(int(next_angle))+ "| S2: " + String(int(next_angle_2))+ "| ph: " + String(sine_states[newgw_phase][phase_shift]));
-           // Serial.println(next_angle_2);
+            //Serial1.print("E" +String(int(next_angle))+","+String(int(next_angle_2))+"\n");
             S2.write(next_angle_2);
       
        
@@ -278,7 +284,7 @@ void loop() {
        
             if(abs(vel) < 300){
                 newPosition_hold = newPosition;
-             Serial1.println("BREAK");
+           //  Serial1.println("BREAK");
                 break;
           }
             newPosition_hold = newPosition;
@@ -292,7 +298,7 @@ void loop() {
   
     reward = pow(reward, 3);     //emphasize larger rewards
     reward = reward - 100; //give a penalty of -20 for each step to keep the bot from ideling
-   Serial1.println(reward);
+    //Serial1.println(reward);
 
     // Store current position for next iteration
     oldPosition = newPosition;
@@ -324,10 +330,13 @@ void loop() {
     if (Serial1.available()){
       int BT_out =  Serial1.read();
          switch (BT_out) {
-    case 0:  // phase shift has no min max, its circular
-          movedir = -1;
+    case 0:  // 
+          movedir = movedir *-1;
+          movedir == -1 ? Serial1.println("Going backwards") :Serial1.println("Going forwards");
+            
+            
          break;
-    case 1:  // phase shift has no min max, its circular
+    case 1:  // 
           movedir = 1;
         break;
     case 2:
@@ -353,16 +362,46 @@ void loop() {
     case 5:  // phase shift has no min max, its circular
             servo_delay++;
         break;
-         case 7:
-         while(Serial1.read()!= 6);
+    case 7:     // start stop
+        while(Serial1.read()!= 6){
+            if(Serial1.read() == 9){
+              print_Q();
+            }
+          };
     
         break;
+    case 8:    // reset QTable
+        for (i = 0 ; i < state_space ; i++){
+            for (j = 0 ; j < actions ; j++ ){
+                Q[i][j] = 0;
+            }
          }
+         break;
+    case 9:   // print Qtable
+        print_Q();
+        break; 
+    
+     case 10:   // info
+        print_Q();
+        break; 
+    }
          
          Serial1.flush();
         }
-  // Keep reading from Arduino Serial Monitor and send to HC-05
+        
+        }
+
 
    
-     Serial.println(movedir);
+    
+
+
+
+void print_Q() {
+  
+    for (i = 0 ; i < state_space ; i++){
+        for (j = 0 ; j < actions ; j++ ){
+            Serial1.println("Q["+String(i)+"]["+String(j)+"] = " +   String(Q[i][j]));
+        }
+    }
 }
